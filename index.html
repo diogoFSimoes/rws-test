@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RWS Iframe Test Page</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; }
+        iframe { border: 2px solid steelblue; margin-top: 15px; margin-bottom: 15px; }
+        button { margin-top: 10px; margin-bottom: 10px; padding: 8px 15px; cursor: pointer; }
+        pre { background-color: #f0f0f0; padding: 10px; border-radius: 4px; border: 1px solid #ccc; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word; }
+        code { font-family: monospace; }
+        .instructions { margin-top: 25px; border-top: 1px solid #ccc; padding-top: 20px; }
+        .output { margin-top: 5px; font-style: italic; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>Related Website Sets - Iframe Interaction Test</h1>
+    <p>
+        This page embeds an iframe. You can use your browser's developer console to test
+        how the Storage Access API (SAA) behaves between this top-level page and the embedded site,
+        which might be influenced by Related Website Sets (RWS).
+    </p>
+    <p>
+        <strong>Top-level page origin:</strong> <code id="top-origin">Loading...</code><br>
+        <strong>Iframe source:</strong> <code>https://rws-member-1.glitch.me</code>
+    </p>
+
+    <iframe id="test-iframe"
+            src="https://rws-member-1.glitch.me"  /* <-- CHANGE THIS URL if needed */
+            width="90%"
+            height="450"
+            title="Test Iframe for RWS/SAA">
+    </iframe>
+
+    <h2>Test Actions (using Browser Console)</h2>
+
+    <div class="instructions">
+        <h3>1. Testing from the Iframe's Console:</h3>
+        <ul>
+            <li>Right-click <strong>inside</strong> the blue iframe border above and choose "Inspect" or "Inspect Element".</li>
+            <li>Navigate to the "Console" tab in the developer tools.</li>
+            <li><strong>Important:</strong> Ensure the console's context selector (often a dropdown menu) is set to the iframe's origin (e.g., <code>rws-member-1.glitch.me</code>).</li>
+            <li>Try running these commands in the iframe's console:
+                <pre><code>document.hasStorageAccess().then(access => console.log('Iframe hasStorageAccess:', access));</code></pre>
+                <pre><code>document.requestStorageAccess().then(() => console.log('Iframe requestStorageAccess Succeeded'), (err) => console.error('Iframe requestStorageAccess Failed:', err));</code></pre>
+            </li>
+            <li>Observe if access is granted automatically (`hasStorageAccess` is true) or if `requestStorageAccess` resolves without a user prompt. This *could* indicate an RWS effect if the top-level origin and iframe origin are in the same set.</li>
+        </ul>
+
+        <h3>2. Testing from the Top-Level Page's Console (Chrome Specific):</h3>
+        <p>This uses <code>document.requestStorageAccessFor()</code>, a Chrome-specific API allowing a top-level site to request storage access *on behalf* of an embedded site, typically only allowed if they are in the same RWS.</p>
+        <ul>
+            <li>Right-click anywhere on <strong>this page outside</strong> the iframe and choose "Inspect" / "Console".</li>
+            <li>Ensure the console context is set to this page (<code>top</code> or the actual origin).</li>
+            <li>Click the button below or run the command manually:
+                 <pre><code>document.requestStorageAccessFor('https://rws-member-1.glitch.me')
+  .then(() => console.log('Top-level requestStorageAccessFor Succeeded'))
+  .catch(err => console.error('Top-level requestStorageAccessFor Failed:', err));
+</code></pre>
+                 (Replace the URL if you changed the iframe `src`).
+            </li>
+        </ul>
+        <button id="test-rwsaf-button">Test requestStorageAccessFor (Chrome)</button>
+        <div id="rwsaf-output" class="output">Button output will appear here...</div>
+    </div>
+
+    <script>
+        // Display the top-level origin
+        document.getElementById('top-origin').textContent = window.location.origin;
+
+        // Script for the requestStorageAccessFor test button
+        const rwsafButton = document.getElementById('test-rwsaf-button');
+        const rwsafOutput = document.getElementById('rwsaf-output');
+        // --- Make sure this origin matches the iframe src ---
+        const iframeOrigin = 'https://rws-member-1.glitch.me';
+        // ----------------------------------------------------
+
+        if (rwsafButton) {
+            rwsafButton.addEventListener('click', async () => {
+                rwsafOutput.textContent = `Attempting document.requestStorageAccessFor('${iframeOrigin}')... Check console for details.`;
+                console.log(`Attempting document.requestStorageAccessFor('${iframeOrigin}')...`);
+
+                if (typeof document.requestStorageAccessFor === 'function') {
+                    try {
+                        await document.requestStorageAccessFor(iframeOrigin);
+                        rwsafOutput.textContent = `SUCCESS: document.requestStorageAccessFor('${iframeOrigin}') granted.`;
+                        console.log(`SUCCESS: document.requestStorageAccessFor('${iframeOrigin}') granted.`);
+                    } catch (err) {
+                        rwsafOutput.textContent = `FAILED: document.requestStorageAccessFor('${iframeOrigin}') failed. Error: ${err.message}`;
+                        console.error(`FAILED: document.requestStorageAccessFor('${iframeOrigin}') failed:`, err);
+                    }
+                } else {
+                    const msg = 'FAILED: document.requestStorageAccessFor is not supported in this browser or context.';
+                    rwsafOutput.textContent = msg;
+                    console.warn(msg);
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>
